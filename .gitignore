@@ -1,7 +1,9 @@
 # El Excel lleva la CLAVE_ACCESO en texto plano: nunca va al repositorio.
-datos/
+# La barra inicial ancla la regla a la raiz: sin ella tambien excluiria
+# docs/datos/, que es justo lo que hay que publicar.
+/datos/
 
 # Entorno de Python local
-venv/
+/venv/
 __pycache__/
 *.pyc
