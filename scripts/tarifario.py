@@ -27,8 +27,10 @@ from datetime import date, datetime
 
 from openpyxl import load_workbook
 
-# La grilla no declara moneda en ninguna celda. Los importes (1400 a 3200) solo
-# cierran en dolares; en pesos serian absurdos. Se asume USD y se informa.
+# La grilla no declara la moneda en ninguna celda: es USD, confirmado por la
+# direccion el 06/11/2026. Si alguna vez se cotizara en pesos no alcanzaria con
+# cambiar esta constante, porque conviviran las dos monedas: habria que leer la
+# moneda por fila, como ya hace la seccion de cotizaciones puntuales.
 MONEDA = "USD"
 DESTINO = "CHILE"
 

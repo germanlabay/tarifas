@@ -74,9 +74,13 @@ y motivo, para poder corregir el Excel si hace falta.
 
 ### La moneda
 
-La grilla no dice en ninguna celda en qué moneda está. Por los importes
-(1.400 a 3.200) solo cierra en dólares, así que la app muestra **USD**. Si
-alguna vez eso cambia, hay que tocar `MONEDA` en `scripts\tarifario.py`.
+La grilla no dice en ninguna celda en qué moneda está: es **USD**, confirmado
+por la dirección el 06/11/2026, y así la muestra la app. Está fijo en `MONEDA`,
+en `scripts\tarifario.py`.
+
+Si alguna vez se cotizara en pesos, **no alcanza con cambiar ese valor**:
+convivirían las dos monedas en la misma grilla y habría que leer la moneda fila
+por fila. Conviene avisar antes de empezar a cargar tarifas en pesos ahí.
 
 ---
 
