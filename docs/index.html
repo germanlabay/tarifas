@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tarifas de Transporte</title>
+<meta name="description" content="Consulta de tarifas de transporte terrestre por origen, destino, tipo y tamaño de contenedor.">
+<meta name="theme-color" content="#14263d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+<!-- ============ PANTALLA DE CLAVE ============ -->
+<section id="pantalla-clave" class="clave-pantalla" hidden>
+  <div class="clave-caja">
+    <div class="clave-icono" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+        <rect x="3" y="7" width="15" height="10" rx="1.5"></rect>
+        <path d="M18 10h2.2l1.3 2.4V17H18z"></path>
+        <circle cx="7.5" cy="18.5" r="1.8" fill="currentColor" stroke="none"></circle>
+        <circle cx="17" cy="18.5" r="1.8" fill="currentColor" stroke="none"></circle>
+        <path d="M7 7v10M11 7v10M15 7v10" opacity=".45"></path>
+      </svg>
+    </div>
+    <h1 class="clave-titulo">Tarifas de Transporte</h1>
+    <p class="clave-sub">Ingrese la clave de acceso para ver las tarifas.</p>
+    <form id="form-clave" autocomplete="off">
+      <input id="campo-clave" type="password" inputmode="text" placeholder="Clave de acceso"
+             aria-label="Clave de acceso" autocapitalize="none" spellcheck="false">
+      <button type="submit" id="boton-entrar" class="boton-primario">Entrar</button>
+    </form>
+    <p id="clave-error" class="clave-error" role="alert" hidden></p>
+    <p class="clave-pie">La clave la entrega el operador de tarifas.</p>
+  </div>
+</section>
+
+<!-- ============ APP ============ -->
+<div id="app" hidden>
+
+  <header class="cabecera">
+    <div class="cabecera-fila">
+      <div class="cabecera-texto">
+        <h1 id="titulo-app">Tarifas de Transporte</h1>
+        <p id="estado-datos" class="estado">
+          <span id="estado-punto" class="punto"></span><span id="estado-texto">Cargando&hellip;</span>
+        </p>
+      </div>
+      <button id="boton-refrescar" class="boton-icono" title="Buscar tarifas nuevas" aria-label="Buscar tarifas nuevas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="contenido">
+
+    <div class="buscador">
+      <svg class="buscador-lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path>
+      </svg>
+      <input id="campo-texto" type="search" placeholder="Buscar ruta, ej. mendoza chile"
+             aria-label="Búsqueda libre" autocapitalize="none" spellcheck="false">
+      <button id="limpiar-texto" class="buscador-limpiar" aria-label="Limpiar búsqueda" hidden>&times;</button>
+    </div>
+
+    <div class="ruta">
+      <button class="ruta-campo" id="sel-origen" aria-haspopup="dialog">
+        <span class="ruta-etiqueta">Origen</span>
+        <span class="ruta-valor vacio" id="val-origen">Cualquiera</span>
+      </button>
+      <button class="ruta-invertir" id="boton-invertir" title="Invertir origen y destino" aria-label="Invertir origen y destino">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 4v16"></path><path d="M4 7l3-3 3 3"></path>
+          <path d="M17 20V4"></path><path d="M20 17l-3 3-3-3"></path>
+        </svg>
+      </button>
+      <button class="ruta-campo" id="sel-destino" aria-haspopup="dialog">
+        <span class="ruta-etiqueta">Destino</span>
+        <span class="ruta-valor vacio" id="val-destino">Cualquiera</span>
+      </button>
+    </div>
+
+    <div class="grupo">
+      <span class="grupo-titulo">Tamaño</span>
+      <div class="fichas" id="fichas-tam" role="group" aria-label="Tamaño de contenedor"></div>
+    </div>
+
+    <div class="grupo">
+      <span class="grupo-titulo">Tipo de contenedor</span>
+      <div class="fichas" id="fichas-tipo" role="group" aria-label="Tipo de contenedor"></div>
+    </div>
+
+    <div class="resultados-cabecera">
+      <span id="resultados-cuenta">&nbsp;</span>
+      <button id="boton-limpiar" class="boton-texto" hidden>Limpiar filtros</button>
+    </div>
+
+    <div id="resultados" aria-live="polite"></div>
+
+  </main>
+
+  <!-- selector de origen / destino -->
+  <div id="hoja" class="hoja" hidden role="dialog" aria-modal="true" aria-labelledby="hoja-titulo">
+    <div class="hoja-fondo" data-cerrar></div>
+    <div class="hoja-panel">
+      <div class="hoja-barra"><span class="hoja-tirador"></span></div>
+      <h2 id="hoja-titulo" class="hoja-titulo">Origen</h2>
+      <div class="buscador hoja-buscador">
+        <svg class="buscador-lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path>
+        </svg>
+        <input id="hoja-filtro" type="search" placeholder="Filtrar&hellip;" autocapitalize="none" spellcheck="false" aria-label="Filtrar lista">
+      </div>
+      <ul id="hoja-lista" class="hoja-lista"></ul>
+    </div>
+  </div>
+
+  <div id="aviso" class="aviso" role="status" hidden></div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

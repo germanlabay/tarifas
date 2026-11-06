@@ -1,0 +1,7 @@
+# El Excel lleva la CLAVE_ACCESO en texto plano: nunca va al repositorio.
+datos/
+
+# Entorno de Python local
+venv/
+__pycache__/
+*.pyc

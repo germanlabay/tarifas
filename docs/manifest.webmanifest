@@ -1,0 +1,19 @@
+{
+  "name": "Tarifas de Transporte",
+  "short_name": "Tarifas",
+  "description": "Consulta de tarifas de transporte terrestre por origen, destino, tipo y tamaño de contenedor.",
+  "lang": "es-AR",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#14263d",
+  "theme_color": "#14263d",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icono-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
