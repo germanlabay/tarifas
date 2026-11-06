@@ -4,6 +4,11 @@
  * La clave que escribe el usuario deriva la llave con PBKDF2 y descifra en el
  * telefono: el servidor nunca ve la clave y el archivo publicado es ilegible
  * sin ella. Una vez descifrado se guarda localmente para funcionar sin señal.
+ *
+ * Modelo: una tarifa es transportista x zona de carga x tamaño x modalidad
+ * (ida / ida y vuelta). El destino es el mismo para toda la grilla y viaja en
+ * datos.destino. Los recargos (GENSET, CDA, vacios) son del transportista y se
+ * muestran al lado de la tarifa, sin sumarse: quien cotiza decide cual aplica.
  */
 
 const RUTA_DATOS = 'datos/tarifas.json';
@@ -13,9 +18,9 @@ const LS_DATOS = 'tarifas.datos';
 const $ = (id) => document.getElementById(id);
 
 const estado = {
-  datos: null,        // { generado, titulo, empresa, tarifas: [] }
+  datos: null,
   clave: null,
-  filtros: { origen: null, destino: null, tam: null, tipo: null, texto: '' },
+  filtros: { zona: null, t: null, tam: null, mod: null, texto: '' },
   campoHoja: null,
 };
 
@@ -24,6 +29,10 @@ const estado = {
 const sinAcentos = (t) =>
   String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
 
+const escapar = (t) =>
+  String(t == null ? '' : t).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 function deB64(b64) {
   const bruto = atob(b64);
   const bytes = new Uint8Array(bruto.length);
@@ -31,12 +40,28 @@ function deB64(b64) {
   return bytes;
 }
 
-function formatoMonto(n, moneda) {
+function formatoMonto(n) {
+  const moneda = (estado.datos && estado.datos.moneda) || 'USD';
   const simbolo = moneda === 'USD' ? 'U$S' : '$';
   return simbolo + ' ' + n.toLocaleString('es-AR', {
     minimumFractionDigits: n % 1 ? 2 : 0,
     maximumFractionDigits: 2,
   });
+}
+
+// "20" -> "20'" pero "40 HCR" se deja como esta: la comilla de pies solo va
+// cuando el tamaño es un numero pelado.
+const etiquetaTam = (v) => (/^\d+$/.test(v) ? v + "'" : v);
+
+const textoModalidad = (id) => {
+  const m = estado.datos && estado.datos.modalidades.find((x) => x.id === id);
+  return m ? m.texto : id;
+};
+
+function fechaCorta(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00');
+  return isNaN(d) ? iso : d.toLocaleDateString('es-AR');
 }
 
 function haceCuanto(iso) {
@@ -102,6 +127,8 @@ function mostrarEstado(clase, texto) {
   $('estado-texto').textContent = texto;
 }
 
+const resumen = (d) => `${d.tarifas.length} tarifas · actualizado ${haceCuanto(d.generado)}`;
+
 function guardarLocal() {
   try {
     localStorage.setItem(LS_DATOS, JSON.stringify(estado.datos));
@@ -118,13 +145,11 @@ function aplicarDatos(datos, { avisar } = {}) {
   document.title = datos.titulo || 'Tarifas de Transporte';
   $('titulo-app').textContent = datos.titulo || 'Tarifas de Transporte';
 
-  mostrarEstado('', `${datos.tarifas.length} tarifas · actualizado ${haceCuanto(datos.generado)}`);
+  mostrarEstado('', resumen(datos));
   construirFichas();
   render();
 
-  if (avisar && anterior && anterior !== datos.generado) {
-    aviso('Tarifas actualizadas');
-  }
+  if (avisar && anterior && anterior !== datos.generado) aviso('Tarifas actualizadas');
 }
 
 async function sincronizar({ manual } = {}) {
@@ -134,17 +159,15 @@ async function sincronizar({ manual } = {}) {
     const sobre = await bajarSobre();
 
     if (estado.datos && sobre.generado === estado.datos.generado) {
-      mostrarEstado('', `${estado.datos.tarifas.length} tarifas · actualizado ${haceCuanto(estado.datos.generado)}`);
+      mostrarEstado('', resumen(estado.datos));
       if (manual) aviso('Ya tiene las tarifas al día');
       return;
     }
 
     const datos = await descifrar(sobre, estado.clave);
     aplicarDatos(datos, { avisar: true });
-    if (manual && !estado.datos) aviso('Tarifas actualizadas');
   } catch (err) {
     if (err && err.name === 'OperationError') {
-      // la clave de publicacion cambio: hay que pedirla de nuevo
       localStorage.removeItem(LS_CLAVE);
       pedirClave('El operador cambió la clave. Pida la nueva y vuelva a entrar.');
       return;
@@ -168,10 +191,10 @@ async function sincronizar({ manual } = {}) {
 
 function pasaParcial(t, omitir) {
   const f = estado.filtros;
-  if (omitir !== 'origen' && f.origen && t.o !== f.origen) return false;
-  if (omitir !== 'destino' && f.destino && t.d !== f.destino) return false;
+  if (omitir !== 'zona' && f.zona && t.zona !== f.zona) return false;
+  if (omitir !== 't' && f.t && t.t !== f.t) return false;
   if (omitir !== 'tam' && f.tam && t.tam !== f.tam) return false;
-  if (omitir !== 'tipo' && f.tipo && t.tipo !== f.tipo) return false;
+  if (omitir !== 'mod' && f.mod && t.mod !== f.mod) return false;
   if (omitir !== 'texto' && f.texto) {
     const palabras = sinAcentos(f.texto).split(/\s+/).filter(Boolean);
     if (!palabras.every((p) => t.b.includes(p))) return false;
@@ -182,15 +205,15 @@ function pasaParcial(t, omitir) {
 const filtradas = () => (estado.datos ? estado.datos.tarifas.filter((t) => pasaParcial(t)) : []);
 
 function opcionesDe(campo) {
-  const llave = { origen: 'o', destino: 'd', tam: 'tam', tipo: 'tipo' }[campo];
   const cuentas = new Map();
   for (const t of estado.datos.tarifas) {
     if (!pasaParcial(t, campo)) continue;
-    cuentas.set(t[llave], (cuentas.get(t[llave]) || 0) + 1);
+    cuentas.set(t[campo], (cuentas.get(t[campo]) || 0) + 1);
   }
+  const orden = campo === 'zona' ? estado.datos.zonas : null;
   const lista = [...cuentas.entries()].map(([valor, cuenta]) => ({ valor, cuenta }));
-  if (campo === 'tam') {
-    lista.sort((a, b) => Number(a.valor) - Number(b.valor));
+  if (orden) {
+    lista.sort((a, b) => orden.indexOf(a.valor) - orden.indexOf(b.valor));
   } else {
     lista.sort((a, b) => a.valor.localeCompare(b.valor, 'es'));
   }
@@ -199,7 +222,7 @@ function opcionesDe(campo) {
 
 function hayFiltros() {
   const f = estado.filtros;
-  return !!(f.origen || f.destino || f.tam || f.tipo || f.texto);
+  return !!(f.zona || f.t || f.tam || f.mod || f.texto);
 }
 
 function fijar(campo, valor) {
@@ -213,30 +236,32 @@ function fijar(campo, valor) {
 function construirFichas() {
   if (!estado.datos) return;
 
-  for (const [campo, contenedor] of [['tam', $('fichas-tam')], ['tipo', $('fichas-tipo')]]) {
-    const todas = [...new Set(estado.datos.tarifas.map((t) => (campo === 'tam' ? t.tam : t.tipo)))];
-    todas.sort((a, b) => (campo === 'tam' ? Number(a) - Number(b) : a.localeCompare(b, 'es')));
-    const disponibles = new Set(opcionesDe(campo).map((o) => o.valor));
+  const grupos = [
+    ['tam', $('fichas-tam'), estado.datos.tamanos.map((v) => ({ v, texto: etiquetaTam(v) }))],
+    ['mod', $('fichas-mod'), estado.datos.modalidades.map((m) => ({ v: m.id, texto: m.texto }))],
+  ];
 
+  for (const [campo, contenedor, opciones] of grupos) {
+    const disponibles = new Set(opcionesDe(campo).map((o) => o.valor));
     contenedor.innerHTML = '';
-    for (const valor of todas) {
+    for (const { v, texto } of opciones) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'ficha';
-      b.textContent = campo === 'tam' ? valor + "'" : valor;
-      b.setAttribute('aria-pressed', String(estado.filtros[campo] === valor));
-      b.disabled = !disponibles.has(valor) && estado.filtros[campo] !== valor;
-      b.addEventListener('click', () => fijar(campo, valor));
+      b.textContent = texto;
+      b.setAttribute('aria-pressed', String(estado.filtros[campo] === v));
+      b.disabled = !disponibles.has(v) && estado.filtros[campo] !== v;
+      b.addEventListener('click', () => fijar(campo, v));
       contenedor.appendChild(b);
     }
   }
 
-  for (const [campo, boton, salida] of [
-    ['origen', $('sel-origen'), $('val-origen')],
-    ['destino', $('sel-destino'), $('val-destino')],
+  for (const [campo, boton, salida, vacio] of [
+    ['zona', $('sel-zona'), $('val-zona'), 'Elegir zona'],
+    ['t', $('sel-transportista'), $('val-transportista'), 'Todos'],
   ]) {
     const valor = estado.filtros[campo];
-    salida.textContent = valor || 'Cualquiera';
+    salida.textContent = valor || vacio;
     salida.classList.toggle('vacio', !valor);
     boton.classList.toggle('activo', !!valor);
   }
@@ -250,32 +275,55 @@ function iconoVacio() {
     <path d="m20 20-3.5-3.5"></path></svg>`;
 }
 
-function tarjetaHTML(t) {
+function recargosHTML(ficha) {
+  if (!ficha || !ficha.recargos) return '';
+  const partes = Object.entries(ficha.recargos)
+    .map(([k, v]) => `<span class="recargo"><span class="recargo-n">${escapar(k)}</span>
+      ${escapar(formatoMonto(v))}</span>`);
+  if (!partes.length) return '';
+  return `<div class="recargos"><span class="recargos-titulo">Recargos aparte</span>
+    <div class="recargos-lista">${partes.join('')}</div></div>`;
+}
+
+function contactoHTML(ficha) {
+  if (!ficha || !ficha.contactos || !ficha.contactos.length) return '';
+  const c = ficha.contactos[0];
+  const trozos = [];
+  if (c.nombre) trozos.push(escapar(c.nombre));
+  if (c.tel) {
+    const limpio = c.tel.replace(/[^\d+]/g, '');
+    trozos.push(`<a href="tel:${escapar(limpio)}">${escapar(c.tel)}</a>`);
+  }
+  if (c.mail) trozos.push(`<a href="mailto:${escapar(c.mail)}">${escapar(c.mail)}</a>`);
+  return trozos.length ? `<p class="tarjeta-obs">${trozos.join(' · ')}</p>` : '';
+}
+
+function tarjetaHTML(t, posicion) {
+  const ficha = estado.datos.transportistas[t.t] || {};
   const etiquetas = [
-    `<span class="etiqueta">${t.tam}' ${t.tipo}</span>`,
-    t.transportista ? `<span class="etiqueta">${t.transportista}</span>` : '',
-    t.vencida
-      ? `<span class="etiqueta alerta">Vencida ${new Date(t.hasta + 'T00:00').toLocaleDateString('es-AR')}</span>`
-      : (t.hasta ? `<span class="etiqueta">Vigente hasta ${new Date(t.hasta + 'T00:00').toLocaleDateString('es-AR')}</span>` : ''),
+    `<span class="etiqueta">${escapar(etiquetaTam(t.tam))} · ${escapar(textoModalidad(t.mod))}</span>`,
+    ficha.fecha ? `<span class="etiqueta">Cotizado ${escapar(fechaCorta(ficha.fecha))}</span>` : '',
+    ficha.chilena ? `<span class="etiqueta">CL: ${escapar(ficha.chilena)}</span>` : '',
   ].filter(Boolean).join('');
 
   return `
-    <article class="tarjeta${t.vencida ? ' vencida' : ''}">
+    <article class="tarjeta${posicion === 0 ? ' mejor' : ''}">
       <div class="tarjeta-arriba">
         <div class="tarjeta-ruta">
           <div class="tarjeta-tramo">
-            <span class="punta">${t.o}</span>
-            <span class="punta"><span class="flecha" aria-hidden="true">&rarr;</span>${t.d}</span>
+            <span class="punta">${escapar(t.t)}</span>
+            <span class="punta sub"><span class="flecha" aria-hidden="true">&rarr;</span>${escapar(t.zona)} a ${escapar(estado.datos.destino)}</span>
           </div>
-          <div class="tarjeta-meta">Contenedor ${t.tam} pies ${t.tipo}</div>
         </div>
         <div class="tarjeta-precio">
-          <div class="precio-monto">${formatoMonto(t.tarifa, t.moneda)}</div>
-          <div class="precio-moneda">${t.moneda}</div>
+          ${posicion === 0 ? '<div class="insignia">más barato</div>' : ''}
+          <div class="precio-monto">${escapar(formatoMonto(t.tarifa))}</div>
+          <div class="precio-moneda">${escapar(estado.datos.moneda)}</div>
         </div>
       </div>
       <div class="etiquetas">${etiquetas}</div>
-      ${t.obs ? `<p class="tarjeta-obs">${t.obs}</p>` : ''}
+      ${recargosHTML(ficha)}
+      ${contactoHTML(ficha)}
       <div class="tarjeta-pie">
         <button class="boton-copiar" data-copiar="${t.id}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -289,14 +337,18 @@ function tarjetaHTML(t) {
 }
 
 function textoParaCopiar(t) {
+  const ficha = estado.datos.transportistas[t.t] || {};
   const partes = [
-    `${t.o} > ${t.d}`,
-    `Contenedor ${t.tam}' ${t.tipo}`,
-    `Tarifa: ${formatoMonto(t.tarifa, t.moneda)} ${t.moneda}`,
+    `${t.zona} a ${estado.datos.destino}`,
+    `Contenedor ${etiquetaTam(t.tam)} - ${textoModalidad(t.mod)}`,
+    `Transportista: ${t.t}`,
+    `Tarifa: ${formatoMonto(t.tarifa)} ${estado.datos.moneda}`,
   ];
-  if (t.transportista) partes.push(`Transportista: ${t.transportista}`);
-  if (t.obs) partes.push(t.obs);
-  if (t.vencida) partes.push('ATENCIÓN: tarifa vencida, confirmar antes de cotizar.');
+  if (ficha.recargos && Object.keys(ficha.recargos).length) {
+    partes.push('Recargos aparte: ' +
+      Object.entries(ficha.recargos).map(([k, v]) => `${k} ${formatoMonto(v)}`).join(', '));
+  }
+  if (ficha.fecha) partes.push(`Cotizado el ${fechaCorta(ficha.fecha)}`);
   return partes.join('\n');
 }
 
@@ -309,7 +361,8 @@ function render() {
   if (!hayFiltros()) {
     cuenta.textContent = `${estado.datos.tarifas.length} tarifas`;
     caja.innerHTML = `<div class="vacio-mensaje">${iconoVacio()}
-      <p>Elija <strong>origen y destino</strong>, o escriba la ruta en el buscador.</p></div>`;
+      <p>Elegí la <strong>zona de carga</strong>, el contenedor y la modalidad.<br>
+      Te muestro todos los transportistas, del más barato al más caro.</p></div>`;
     return;
   }
 
@@ -318,22 +371,34 @@ function render() {
 
   if (!lista.length) {
     caja.innerHTML = `<div class="vacio-mensaje">${iconoVacio()}
-      <p>No hay tarifa cargada para esa combinación.<br>Pruebe quitando un filtro.</p></div>`;
+      <p>Ningún transportista tiene esa combinación cotizada.<br>Probá quitando un filtro.</p></div>`;
     return;
   }
 
-  lista.sort((a, b) =>
-    a.o.localeCompare(b.o, 'es') || a.d.localeCompare(b.d, 'es') ||
-    Number(a.tam) - Number(b.tam) || a.tipo.localeCompare(b.tipo, 'es')
-  );
-  caja.innerHTML = lista.map(tarjetaHTML).join('');
+  // Ordenar por precio solo tiene sentido cuando se compara lo mismo; si no,
+  // se agrupa por zona y tamaño para no mezclar peras con manzanas.
+  const comparable = !!(estado.filtros.zona && estado.filtros.tam && estado.filtros.mod);
+  if (comparable) {
+    lista.sort((a, b) => a.tarifa - b.tarifa);
+  } else {
+    const orden = estado.datos.zonas;
+    lista.sort((a, b) =>
+      orden.indexOf(a.zona) - orden.indexOf(b.zona) ||
+      a.tam.localeCompare(b.tam, 'es') ||
+      a.mod.localeCompare(b.mod, 'es') ||
+      a.tarifa - b.tarifa);
+  }
+
+  caja.innerHTML = lista.map((t, i) => tarjetaHTML(t, comparable ? i : -1)).join('');
 }
 
-/* ================= hoja de origen / destino ================= */
+/* ================= hoja de seleccion ================= */
+
+const TITULOS_HOJA = { zona: 'Zona de carga', t: 'Transportista' };
 
 function abrirHoja(campo) {
   estado.campoHoja = campo;
-  $('hoja-titulo').textContent = campo === 'origen' ? 'Origen' : 'Destino';
+  $('hoja-titulo').textContent = TITULOS_HOJA[campo];
   $('hoja-filtro').value = '';
   $('hoja').hidden = false;
   document.body.style.overflow = 'hidden';
@@ -364,16 +429,15 @@ function pintarHoja() {
   const tilde = `<svg class="tilde" viewBox="0 0 24 24" fill="none" stroke="currentColor"
     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"></path></svg>`;
 
-  const filas = [
+  lista.innerHTML = [
     `<li><button class="hoja-opcion" data-valor="" aria-selected="${!actual}">
-       <span>Cualquiera</span>${!actual ? tilde : ''}</button></li>`,
+       <span>${campo === 'zona' ? 'Todas las zonas' : 'Todos'}</span>${!actual ? tilde : ''}</button></li>`,
     ...opciones.map((o) => `
-      <li><button class="hoja-opcion" data-valor="${o.valor}" aria-selected="${actual === o.valor}">
-        <span>${o.valor}</span>
+      <li><button class="hoja-opcion" data-valor="${escapar(o.valor)}" aria-selected="${actual === o.valor}">
+        <span>${escapar(o.valor)}</span>
         ${actual === o.valor ? tilde : `<span class="cuenta">${o.cuenta}</span>`}
       </button></li>`),
-  ];
-  lista.innerHTML = filas.join('');
+  ].join('');
 }
 
 /* ================= clave de acceso ================= */
@@ -403,6 +467,14 @@ async function probarClave(clave) {
 }
 
 /* ================= arranque ================= */
+
+function limpiarFiltros() {
+  estado.filtros = { zona: null, t: null, tam: null, mod: null, texto: '' };
+  $('campo-texto').value = '';
+  $('limpiar-texto').hidden = true;
+  construirFichas();
+  render();
+}
 
 function conectarEventos() {
   $('form-clave').addEventListener('submit', async (ev) => {
@@ -435,24 +507,9 @@ function conectarEventos() {
   });
 
   $('boton-refrescar').addEventListener('click', () => sincronizar({ manual: true }));
-
-  $('sel-origen').addEventListener('click', () => abrirHoja('origen'));
-  $('sel-destino').addEventListener('click', () => abrirHoja('destino'));
-
-  $('boton-invertir').addEventListener('click', () => {
-    const f = estado.filtros;
-    [f.origen, f.destino] = [f.destino, f.origen];
-    construirFichas();
-    render();
-  });
-
-  $('boton-limpiar').addEventListener('click', () => {
-    estado.filtros = { origen: null, destino: null, tam: null, tipo: null, texto: '' };
-    $('campo-texto').value = '';
-    $('limpiar-texto').hidden = true;
-    construirFichas();
-    render();
-  });
+  $('sel-zona').addEventListener('click', () => abrirHoja('zona'));
+  $('sel-transportista').addEventListener('click', () => abrirHoja('t'));
+  $('boton-limpiar').addEventListener('click', limpiarFiltros);
 
   let debounce;
   $('campo-texto').addEventListener('input', (ev) => {
@@ -530,14 +587,18 @@ async function iniciar() {
   const guardado = localStorage.getItem(LS_DATOS);
   if (guardado) {
     try {
-      aplicarDatos(JSON.parse(guardado));
-      mostrarEstado('', 'Buscando tarifas nuevas...');
+      const d = JSON.parse(guardado);
+      if (d && Array.isArray(d.tarifas) && d.zonas) {
+        aplicarDatos(d);
+        mostrarEstado('', 'Buscando tarifas nuevas...');
+      } else {
+        localStorage.removeItem(LS_DATOS);   // formato viejo
+      }
     } catch (e) {
       localStorage.removeItem(LS_DATOS);
     }
-  } else {
-    mostrarEstado('', 'Cargando tarifas...');
   }
+  if (!estado.datos) mostrarEstado('', 'Cargando tarifas...');
 
   await sincronizar();
 
