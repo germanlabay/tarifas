@@ -271,7 +271,7 @@ input {
 
 .ruta {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr auto 1fr;
   align-items: stretch;
   gap: 8px;
   margin-bottom: 18px;
@@ -471,74 +471,6 @@ input {
   padding-top: 11px;
   border-top: 1px solid var(--borde);
   font-size: .85rem;
-  color: var(--texto-suave);
-  overflow-wrap: anywhere;
-}
-
-.tarjeta-obs a { color: inherit; }
-
-/* el transportista manda en la tarjeta; la ruta va en segundo plano */
-.tarjeta-tramo .punta.sub {
-  font-size: .85rem;
-  font-weight: 500;
-  color: var(--texto-suave);
-}
-
-.tarjeta.mejor { border-color: var(--verde); }
-
-.insignia {
-  display: inline-block;
-  margin-bottom: 3px;
-  padding: 2px 7px;
-  border-radius: 5px;
-  background: color-mix(in srgb, var(--verde) 16%, transparent);
-  color: var(--verde);
-  font-size: .66rem;
-  font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-@media (prefers-color-scheme: dark) {
-  .insignia { color: #5cd98a; background: rgba(92, 217, 138, .14); }
-  .tarjeta.mejor { border-color: rgba(92, 217, 138, .5); }
-}
-
-/* Recargos: se muestran, no se suman. La tarifa de arriba es la tarifa. */
-.recargos {
-  margin-top: 11px;
-  padding-top: 11px;
-  border-top: 1px solid var(--borde);
-}
-
-.recargos-titulo {
-  display: block;
-  margin-bottom: 6px;
-  font-size: .66rem;
-  font-weight: 600;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--texto-suave);
-}
-
-.recargos-lista { display: flex; flex-wrap: wrap; gap: 6px; }
-
-.recargo {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
-  padding: 4px 9px;
-  border: 1px solid var(--borde);
-  border-radius: 7px;
-  font-size: .78rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.recargo-n {
-  font-size: .66rem;
-  font-weight: 700;
-  letter-spacing: .04em;
   color: var(--texto-suave);
 }
 

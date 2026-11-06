@@ -65,30 +65,36 @@
       <svg class="buscador-lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
         <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path>
       </svg>
-      <input id="campo-texto" type="search" placeholder="Buscar zona o transportista"
+      <input id="campo-texto" type="search" placeholder="Buscar ruta, ej. mendoza chile"
              aria-label="Búsqueda libre" autocapitalize="none" spellcheck="false">
       <button id="limpiar-texto" class="buscador-limpiar" aria-label="Limpiar búsqueda" hidden>&times;</button>
     </div>
 
     <div class="ruta">
-      <button class="ruta-campo" id="sel-zona" aria-haspopup="dialog">
-        <span class="ruta-etiqueta">Zona de carga</span>
-        <span class="ruta-valor vacio" id="val-zona">Elegir zona</span>
+      <button class="ruta-campo" id="sel-origen" aria-haspopup="dialog">
+        <span class="ruta-etiqueta">Origen</span>
+        <span class="ruta-valor vacio" id="val-origen">Cualquiera</span>
       </button>
-      <button class="ruta-campo" id="sel-transportista" aria-haspopup="dialog">
-        <span class="ruta-etiqueta">Transportista</span>
-        <span class="ruta-valor vacio" id="val-transportista">Todos</span>
+      <button class="ruta-invertir" id="boton-invertir" title="Invertir origen y destino" aria-label="Invertir origen y destino">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 4v16"></path><path d="M4 7l3-3 3 3"></path>
+          <path d="M17 20V4"></path><path d="M20 17l-3 3-3-3"></path>
+        </svg>
+      </button>
+      <button class="ruta-campo" id="sel-destino" aria-haspopup="dialog">
+        <span class="ruta-etiqueta">Destino</span>
+        <span class="ruta-valor vacio" id="val-destino">Cualquiera</span>
       </button>
     </div>
 
     <div class="grupo">
-      <span class="grupo-titulo">Contenedor</span>
+      <span class="grupo-titulo">Tamaño</span>
       <div class="fichas" id="fichas-tam" role="group" aria-label="Tamaño de contenedor"></div>
     </div>
 
     <div class="grupo">
-      <span class="grupo-titulo">Modalidad</span>
-      <div class="fichas" id="fichas-mod" role="group" aria-label="Modalidad del viaje"></div>
+      <span class="grupo-titulo">Tipo de contenedor</span>
+      <div class="fichas" id="fichas-tipo" role="group" aria-label="Tipo de contenedor"></div>
     </div>
 
     <div class="resultados-cabecera">

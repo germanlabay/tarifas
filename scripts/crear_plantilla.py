@@ -50,11 +50,13 @@ EJEMPLOS = [
     ("MENDOZA", "CORDOBA", 40, "DRY", 1180, "ARS", "LOGISTICA DEL SUR", None, None, "Tarifa en pesos por pedido del cliente"),
 ]
 
+# La hoja CONFIG queda solo como referencia: publicar.py lee la configuracion
+# de config.txt. La CLAVE_ACCESO no se escribe aca a proposito -ni como
+# ejemplo-, porque esta planilla va a un recurso compartido que ve toda la
+# oficina y cualquier clave que aparezca ahi se toma por buena.
 CONFIG = [
-    ("CLAVE_ACCESO", "marblau2026", "Clave que piden los usuarios al abrir la app. Cambiela."),
-    ("TITULO", "Tarifas Transporte Terrestre", "Titulo que se muestra en la app."),
-    ("EMPRESA", "MARBLAU", "Nombre que se muestra en el encabezado."),
-    ("URL_PUBLICACION", "", "URL publica donde queda la app. La completa el script al publicar."),
+    ("TITULO", "Tarifas Transporte Terrestre", "Solo informativo: el valor que vale esta en config.txt."),
+    ("EMPRESA", "MARBLAU", "Solo informativo: el valor que vale esta en config.txt."),
 ]
 
 AZUL = "1F3A5F"
@@ -133,7 +135,8 @@ def main():
         ("", False),
         ("CLAVE DE ACCESO", True),
         ("", False),
-        ("- La clave esta en la hoja CONFIG, celda VALOR de CLAVE_ACCESO.", False),
+        ("- NO esta en esta planilla: esta en config.txt, en la carpeta del proyecto.", False),
+        ("- Se saco de aca a proposito, porque esta planilla la ve toda la oficina.", False),
         ("- Las tarifas se publican cifradas con esa clave: sin la clave el archivo no se lee.", False),
         ("- Si la cambia, los usuarios tienen que escribir la clave nueva una sola vez.", False),
     ]
