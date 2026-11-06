@@ -26,6 +26,8 @@ consultan. No instalan nada desde una tienda ni actualizan nada a mano.
 La ventana negra muestra el resultado:
 
 - **Filas validas: N** y *Listo* → publicado.
+- **"Las tarifas no cambiaron"** → ya estaba todo publicado. Pasa si se ejecuta
+  dos veces seguidas, o si el Excel se guardó sin cambios reales.
 - **Avisos** → se publicó igual, pero conviene mirarlos (tarifas vencidas,
   rutas repetidas, tipos raros).
 - **ERRORES** → **no se publicó nada**. Dice número de fila y problema.

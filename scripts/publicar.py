@@ -6,6 +6,7 @@ Uso:
     publicar.py --git      ademas hace commit y push si hay repo con remoto
 """
 import base64
+import hashlib
 import json
 import os
 import re
@@ -25,6 +26,7 @@ from openpyxl import load_workbook
 RAIZ = Path(__file__).resolve().parent.parent
 ORIGEN_XLSX = RAIZ / "datos" / "tarifas.xlsx"
 SALIDA = RAIZ / "docs" / "datos" / "tarifas.json"
+HUELLA = RAIZ / "datos" / ".huella"
 
 ITERACIONES = 210_000
 TIPOS_CONOCIDOS = {"DRY", "HC", "REEFER", "OPEN TOP", "FLAT RACK", "TANK"}
@@ -300,25 +302,42 @@ def main():
         print("\nERROR: la hoja TARIFAS no tiene ninguna fila valida, no se publico nada.")
         return 1
 
-    generado = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
-    interno = {
-        "generado": generado,
+    contenido = {
         "titulo": cfg.get("TITULO") or "Tarifas de Transporte",
         "empresa": cfg.get("EMPRESA") or "",
         "tarifas": tarifas,
     }
-    crudo = json.dumps(interno, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
-    sobre = {"formato": "marblau-tarifas-1", "generado": generado, "cantidad": len(tarifas)}
-    sobre.update(cifrar(crudo, clave))
+    # Cada cifrado usa sal e IV nuevos, asi que el archivo cambia aunque las
+    # tarifas no. Para no generar commits vacios se compara una huella de lo
+    # que importa -el contenido y la clave, sin el sello de tiempo, que cambia
+    # siempre-. Se guarda junto al Excel, fuera del repositorio: depende de la
+    # clave y no tiene por que publicarse.
+    estable = json.dumps(contenido, ensure_ascii=False, sort_keys=True,
+                         separators=(",", ":")).encode("utf-8")
+    huella = hashlib.sha256(clave.encode("utf-8") + b"|" + estable).hexdigest()
+    anterior = HUELLA.read_text(encoding="utf-8").strip() if HUELLA.exists() else None
 
     SALIDA.parent.mkdir(parents=True, exist_ok=True)
-    SALIDA.write_text(json.dumps(sobre, ensure_ascii=False), encoding="utf-8")
+    sin_cambios = anterior == huella and SALIDA.exists()
+
+    if not sin_cambios:
+        generado = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+        crudo = json.dumps(dict(generado=generado, **contenido), ensure_ascii=False,
+                           separators=(",", ":")).encode("utf-8")
+        sobre = {"formato": "marblau-tarifas-1", "generado": generado, "cantidad": len(tarifas)}
+        sobre.update(cifrar(crudo, clave))
+        SALIDA.write_text(json.dumps(sobre, ensure_ascii=False), encoding="utf-8")
+        HUELLA.write_text(huella, encoding="utf-8")
 
     origenes = sorted({t["o"] for t in tarifas})
     destinos = sorted({t["d"] for t in tarifas})
-    print("\nGenerado : %s" % SALIDA)
-    print("Tamano   : %.1f KB (cifrado)" % (SALIDA.stat().st_size / 1024))
+    if sin_cambios:
+        print("\nLas tarifas no cambiaron desde la ultima publicacion.")
+        print("Se mantiene el archivo que ya estaba.")
+    else:
+        print("\nGenerado : %s" % SALIDA)
+        print("Tamano   : %.1f KB (cifrado)" % (SALIDA.stat().st_size / 1024))
     print("Origenes : %d  |  Destinos: %d" % (len(origenes), len(destinos)))
     print("Sello    : %s" % datetime.now().strftime("%d/%m/%Y %H:%M"))
 
