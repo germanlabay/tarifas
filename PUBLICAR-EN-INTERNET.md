@@ -101,6 +101,19 @@ origin"*, algo del paso 3 anterior quedó a medias.
 
 GitHub tarda entre 20 segundos y 2 minutos en servir el cambio.
 
+### Cómo se despliega
+
+El despliegue lo hace `.github/workflows/publicar.yml`, que publica la carpeta
+`docs\` en cada push a `main`. Se agregó porque el modo automático de Pages
+("Deploy from a branch") construyó el sitio una sola vez, al encenderlo, y
+después dejó de reaccionar a los push: el sitio quedaba servido en una versión
+vieja sin que nada avisara.
+
+Si alguna vez el sitio no se actualiza, mirá la pestaña **Actions** del
+repositorio: ahí está cada despliegue con su resultado y sus registros. Para
+que funcione, en **Settings → Pages**, **Source** tiene que estar en
+**GitHub Actions**.
+
 ---
 
 ## Repartir la app
