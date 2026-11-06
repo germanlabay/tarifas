@@ -1,0 +1,44 @@
+# Despliega la carpeta docs/ en GitHub Pages en cada push a main.
+#
+# Reemplaza al build implicito de Pages ("Deploy from a branch"), que dejo de
+# dispararse con los push y solo corria al guardar la configuracion a mano.
+# Para que esto funcione, en Settings > Pages la opcion Source tiene que estar
+# en "GitHub Actions".
+
+name: Publicar la app
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  desplegar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - name: Bajar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Empaquetar docs/
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Desplegar
+        id: despliegue
+        uses: actions/deploy-pages@v4
