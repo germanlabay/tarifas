@@ -18,9 +18,9 @@ consultan. No instalan nada desde una tienda ni actualizan nada a mano.
 
 ## Cómo se actualiza una tarifa
 
-1. Abrir `datos\tarifas.xlsx`.
+1. Abrir la planilla: **`\\PC-02\Compartido\tarifas.xlsx`**.
 2. Cambiar, agregar o borrar filas en la hoja **TARIFAS**.
-3. Guardar y cerrar el Excel.
+3. **Guardar** el Excel (con guardar alcanza; no hace falta cerrarlo).
 4. Doble clic en **`PUBLICAR.bat`**.
 
 La ventana negra muestra el resultado:
@@ -37,6 +37,24 @@ Los celulares toman las tarifas nuevas al abrir la app, o al tocar el botón
 de refrescar arriba a la derecha.
 
 ---
+
+## Dónde vive la planilla
+
+En el recurso compartido **`\\PC-02\Compartido\tarifas.xlsx`**, para que la
+mantenga el operador desde su propia PC sin depender de esta.
+
+La ruta está en **`planilla.txt`**, en la carpeta del proyecto: una sola línea
+con la ruta completa. Si la planilla se muda, se cambia ahí y nada más. Si se
+borra ese archivo, `PUBLICAR.bat` usa la copia local `datos\tarifas.xlsx`.
+
+`PUBLICAR.bat` solo **lee** la planilla, así que puede estar abierta en Excel
+mientras tanto — pero lee la última versión **guardada**.
+
+Si PC-02 está apagada o fuera de la red, el publicador lo dice con ese texto y
+no toca nada de lo que ya estaba publicado.
+
+> `planilla.txt` no se sube al repositorio: no tiene sentido publicar los
+> nombres de las máquinas de la oficina.
 
 ## La planilla
 
@@ -111,8 +129,10 @@ encabezado avisa de cuándo son.
 MarblauTarifas\
 ├─ PUBLICAR.bat              ← el operador usa esto
 ├─ PROBAR-EN-ESTA-PC.bat     ← previsualizar en esta PC
+├─ planilla.txt              ← donde esta el Excel (hoy, en PC-02)
 ├─ datos\
-│  └─ tarifas.xlsx           ← la planilla (NO se sube al repositorio)
+│  ├─ tarifas.xlsx           ← copia local de respaldo, solo si falla la red
+│  └─ .huella                ← para no republicar si nada cambio
 ├─ docs\                     ← la app publicada (GitHub Pages exige este nombre)
 │  ├─ index.html, app.js, estilos.css, sw.js, manifest, iconos
 │  └─ datos\tarifas.json     ← generado y cifrado por PUBLICAR.bat

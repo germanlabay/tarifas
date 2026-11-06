@@ -7,3 +7,6 @@
 /venv/
 __pycache__/
 *.pyc
+
+# Ruta local a la planilla: nombres de maquinas de la oficina.
+/planilla.txt

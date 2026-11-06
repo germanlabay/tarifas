@@ -24,9 +24,27 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from openpyxl import load_workbook
 
 RAIZ = Path(__file__).resolve().parent.parent
-ORIGEN_XLSX = RAIZ / "datos" / "tarifas.xlsx"
 SALIDA = RAIZ / "docs" / "datos" / "tarifas.json"
 HUELLA = RAIZ / "datos" / ".huella"
+CONFIG_RUTA = RAIZ / "planilla.txt"
+POR_DEFECTO = RAIZ / "datos" / "tarifas.xlsx"
+
+
+def ruta_planilla():
+    """De donde se lee el Excel: argumento, planilla.txt, o la copia local.
+
+    La planilla vive en un recurso compartido para que la mantenga el operador
+    desde su propia PC, asi que la ruta es configurable y no esta en el codigo.
+    """
+    for a in sys.argv[1:]:
+        if a.lower().endswith((".xlsx", ".xlsm")):
+            return Path(a)
+    if CONFIG_RUTA.exists():
+        for linea in CONFIG_RUTA.read_text(encoding="utf-8").splitlines():
+            linea = linea.strip()
+            if linea and not linea.startswith("#"):
+                return Path(linea)
+    return POR_DEFECTO
 
 ITERACIONES = 210_000
 TIPOS_CONOCIDOS = {"DRY", "HC", "REEFER", "OPEN TOP", "FLAT RACK", "TANK"}
@@ -262,12 +280,35 @@ def git_publicar():
 
 
 def main():
-    if not ORIGEN_XLSX.exists():
+    origen = ruta_planilla()
+    try:
+        existe = origen.exists()
+    except OSError:
+        existe = False
+
+    if not existe:
+        if str(origen).startswith(("\\\\", "//")):
+            raise SystemExit(
+                "ERROR: no se llega a la planilla en la red:\n"
+                "  %s\n\n"
+                "Revise que la PC que la comparte este encendida y conectada.\n"
+                "La ruta configurada esta en %s" % (origen, CONFIG_RUTA)
+            )
         raise SystemExit(
-            "ERROR: no se encuentra %s\nEjecute scripts/crear_plantilla.py para generarla." % ORIGEN_XLSX
+            "ERROR: no se encuentra la planilla:\n"
+            "  %s\n\n"
+            "Ejecute scripts/crear_plantilla.py para generarla, o indique la ruta\n"
+            "correcta en %s" % (origen, CONFIG_RUTA)
         )
 
-    wb = load_workbook(ORIGEN_XLSX, data_only=True)
+    try:
+        wb = load_workbook(origen, data_only=True)
+    except PermissionError:
+        raise SystemExit(
+            "ERROR: no se pudo leer la planilla:\n"
+            "  %s\n\n"
+            "Puede estar abierta con bloqueo exclusivo. Cierrela y reintente." % origen
+        )
     cfg = leer_config(wb)
     clave = str(cfg.get("CLAVE_ACCESO", "") or "").strip()
     if not clave:
@@ -283,7 +324,7 @@ def main():
     print("=" * 66)
     print(" PUBLICAR TARIFAS")
     print("=" * 66)
-    print("Planilla      : %s" % ORIGEN_XLSX)
+    print("Planilla      : %s" % origen)
     print("Filas validas : %d" % len(tarifas))
 
     if avisos:
