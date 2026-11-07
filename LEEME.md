@@ -8,8 +8,8 @@ que mantiene un operador; los celulares se actualizan solos.
 
 ## Las dos personas que usan esto
 
-**El operador** edita `\\PC-02\Compartido\tarifas.xlsx` y hace doble clic en
-`PUBLICAR.bat`. Nada más.
+**El operador** edita `\\PC-02\Compartido\tarifas.xlsx` y **guarda**. Nada
+más: esta PC publica sola cada 10 minutos.
 
 **Los usuarios** abren la app en el celular, escriben la clave una sola vez y
 consultan. No instalan nada desde una tienda ni actualizan nada a mano.
@@ -21,7 +21,11 @@ consultan. No instalan nada desde una tienda ni actualizan nada a mano.
 1. Abrir la planilla: **`\\PC-02\Compartido\tarifas.xlsx`**.
 2. Cambiar, agregar o borrar filas en la hoja **TARIFAS**.
 3. **Guardar** el Excel (con guardar alcanza; no hace falta cerrarlo).
-4. Doble clic en **`PUBLICAR.bat`**.
+
+Y listo. Dentro de los 10 minutos siguientes, esta PC publica sola.
+
+Para no esperar, doble clic en **`PUBLICAR.bat`**, que hace lo mismo al
+instante y muestra el detalle en pantalla.
 
 La ventana negra muestra el resultado:
 
@@ -89,6 +93,55 @@ oficina.
 
 ---
 
+## La publicación automática
+
+Una tarea programada de Windows, **`MARBLAU - Publicar tarifas`**, corre cada
+10 minutos en esta PC y publica si hay algo nuevo. No abre ninguna ventana.
+
+Si no cambió nada, no hace nada: no sube commits vacíos ni molesta a los
+celulares.
+
+### Corre solo con la sesión iniciada
+
+Necesita llegar a PC-02 y a GitHub, y una tarea configurada como "aunque el
+usuario no haya iniciado sesión" **no tiene credenciales de red**. Por eso
+corre solo mientras haya alguien con sesión abierta en esta PC. Si la PC está
+apagada o con la sesión cerrada, las tarifas esperan.
+
+### Cómo saber si está funcionando
+
+Dos archivos en `datos\`:
+
+| Archivo | Qué dice |
+|---|---|
+| `estado.txt` | La hora de la última corrida y si publicó. Se reescribe **siempre**, aunque no haya cambios. |
+| `publicacion.log` | Solo las publicaciones reales y los errores, con el detalle completo. |
+
+Si la fecha de `estado.txt` quedó vieja, la tarea no está corriendo. Si hay
+líneas con `FALLO` en el registro, ahí está el motivo.
+
+> El registro se recorta solo cuando pasa de 200 KB.
+
+### Apagarla o cambiarle el intervalo
+
+Desde PowerShell, en esta PC:
+
+```powershell
+# apagarla
+Disable-ScheduledTask -TaskName "MARBLAU - Publicar tarifas"
+
+# volver a encenderla
+Enable-ScheduledTask -TaskName "MARBLAU - Publicar tarifas"
+
+# borrarla del todo
+Unregister-ScheduledTask -TaskName "MARBLAU - Publicar tarifas" -Confirm:$false
+```
+
+También aparece en el **Programador de tareas** de Windows, con ese nombre.
+Con la tarea apagada, `PUBLICAR.bat` sigue funcionando a mano.
+
+---
+
 ## La clave de acceso
 
 Está en **`config.txt`**, en la carpeta del proyecto:
@@ -152,12 +205,15 @@ MarblauTarifas\
 ├─ planilla.txt              ← donde esta el Excel (hoy, en PC-02)
 ├─ datos\
 │  ├─ tarifas-ejemplo.xlsx   ← plantilla de referencia; respaldo si falla la red
+│  ├─ estado.txt             ← ultima corrida automatica
+│  ├─ publicacion.log        ← publicaciones y errores
 │  └─ .huella                ← para no republicar si nada cambio
 ├─ docs\                     ← la app publicada (GitHub Pages exige este nombre)
 │  ├─ index.html, app.js, estilos.css, sw.js, manifest, iconos
 │  └─ datos\tarifas.json     ← generado y cifrado por PUBLICAR.bat
 ├─ scripts\
 │  ├─ publicar.py            ← valida, cifra y sube
+│  ├─ publicar_auto.py       ← lo mismo, sin ventana, para la tarea programada
 │  ├─ crear_plantilla.py     ← regenera el Excel desde cero
 │  ├─ crear_iconos.py        ← regenera los iconos
 │  └─ tarifario.py           ← sin usar: lee el tarifario matriz de Chile
@@ -174,7 +230,8 @@ MarblauTarifas\
 | La app pide la clave de nuevo | Cambió la `CLAVE_ACCESO` de `config.txt`. Repartir la nueva. |
 | "Clave incorrecta" | La clave no coincide con la de la última publicación. |
 | "Sin conexión" en el encabezado | El celular no tiene datos. Muestra lo último bajado y dice de cuándo es. |
-| El celular no ve el cambio | Verificar que `PUBLICAR.bat` terminó con *Publicado en internet*, y mirar la pestaña **Actions** del repositorio. Después tocar el botón de refrescar en la app. |
+| El celular no ve el cambio | Mirar `datos\estado.txt`: dice cuándo corrió la publicación automática y si publicó. Después tocar el botón de refrescar en la app. |
+| `estado.txt` con fecha vieja | La tarea programada no está corriendo: sesión cerrada en esta PC, o la tarea deshabilitada. |
 | Tarifa marcada como vencida | La `VIGENCIA HASTA` de esa fila ya pasó. Actualizarla o vaciarla. |
 
 ---
