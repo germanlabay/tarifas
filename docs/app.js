@@ -128,6 +128,10 @@ function aplicarDatos(datos, { avisar } = {}) {
   document.title = datos.titulo || 'Tarifas de Transporte';
   $('titulo-app').textContent = datos.titulo || 'Tarifas de Transporte';
 
+  const empresa = $('empresa-app');
+  empresa.textContent = datos.empresa || '';
+  empresa.hidden = !datos.empresa;
+
   mostrarEstado('', `${datos.tarifas.length} tarifas · actualizado ${haceCuanto(datos.generado)}`);
   construirFichas();
   render();

@@ -171,6 +171,18 @@ input {
   text-overflow: ellipsis;
 }
 
+.empresa {
+  margin: 0 0 2px;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .62);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .estado {
   display: flex;
   align-items: center;

@@ -6,7 +6,7 @@
  * tarifa vieja creyendo que es la actual.
  */
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = 'tarifas-' + VERSION;
 
 const ARMAZON = [
