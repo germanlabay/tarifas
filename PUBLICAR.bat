@@ -3,7 +3,7 @@ chcp 65001 >nul
 cd /d "%~dp0"
 title Publicar tarifas
 echo.
-echo  Leyendo datos\tarifas.xlsx ...
+echo  Leyendo la planilla de tarifas ...
 echo.
 venv\Scripts\python.exe scripts\publicar.py --git
 echo.
