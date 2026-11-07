@@ -28,7 +28,7 @@ SALIDA = RAIZ / "docs" / "datos" / "tarifas.json"
 HUELLA = RAIZ / "datos" / ".huella"
 CONFIG_RUTA = RAIZ / "planilla.txt"
 CONFIG = RAIZ / "config.txt"
-POR_DEFECTO = RAIZ / "datos" / "tarifas.xlsx"
+POR_DEFECTO = RAIZ / "datos" / "tarifas-ejemplo.xlsx"
 
 
 def ruta_planilla():

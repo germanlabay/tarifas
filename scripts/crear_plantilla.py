@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Genera datos/tarifas.xlsx, la planilla que edita el operador.
+"""Genera datos/tarifas-ejemplo.xlsx, la plantilla de referencia.
 
 No sobreescribe una planilla existente salvo que se pase --forzar.
 """
@@ -14,7 +14,9 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 RAIZ = Path(__file__).resolve().parent.parent
-DESTINO = RAIZ / "datos" / "tarifas.xlsx"
+# Se llama distinto que la planilla de PC-02 a proposito: Excel no admite
+# dos libros abiertos con el mismo nombre y abre el segundo en solo lectura.
+DESTINO = RAIZ / "datos" / "tarifas-ejemplo.xlsx"
 
 COLUMNAS = [
     ("ORIGEN", 22, "Ciudad o terminal de origen. Obligatorio."),

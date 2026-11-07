@@ -45,7 +45,12 @@ mantenga el operador desde su propia PC sin depender de esta.
 
 La ruta está en **`planilla.txt`**, en la carpeta del proyecto: una sola línea
 con la ruta completa. Si la planilla se muda, se cambia ahí y nada más. Si se
-borra ese archivo, `PUBLICAR.bat` usa la copia local `datos\tarifas.xlsx`.
+borra ese archivo, `PUBLICAR.bat` usa la copia local
+`datos\tarifas-ejemplo.xlsx`, que es la plantilla vacia de referencia.
+
+> No conviene que esa copia se vuelva a llamar `tarifas.xlsx`: Excel no
+> admite dos libros abiertos con el mismo nombre y abre el segundo en
+> **solo lectura**, sin decir por que.
 
 `PUBLICAR.bat` solo **lee** la planilla, así que puede estar abierta en Excel
 mientras tanto — pero lee la última versión **guardada**.
@@ -146,7 +151,7 @@ MarblauTarifas\
 ├─ config.txt                ← clave de acceso y textos (NO se versiona)
 ├─ planilla.txt              ← donde esta el Excel (hoy, en PC-02)
 ├─ datos\
-│  ├─ tarifas.xlsx           ← copia local de respaldo, solo si falla la red
+│  ├─ tarifas-ejemplo.xlsx   ← plantilla de referencia; respaldo si falla la red
 │  └─ .huella                ← para no republicar si nada cambio
 ├─ docs\                     ← la app publicada (GitHub Pages exige este nombre)
 │  ├─ index.html, app.js, estilos.css, sw.js, manifest, iconos
